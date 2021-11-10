@@ -3,14 +3,11 @@ import UIKit
 class TodoListViewController: UITableViewController {
 
     var items: [TodoItem] = []
-    let defaults = UserDefaults.standard
+    let dataFilePath = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first?.appendingPathComponent("Items.plist")
 
     override func viewDidLoad() {
         super.viewDidLoad()
-        if let fetchedItems = defaults.array(forKey: "todoItemsArray") as? [TodoItem] {
-            items = fetchedItems
-        }
-        // Do any additional setup after loading the view.
+        loadItemsFromStorage()
     }
 
     override func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
@@ -26,7 +23,7 @@ class TodoListViewController: UITableViewController {
 
     override func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
         items[indexPath.row].done.toggle()
-        self.defaults.set(self.items, forKey: "todoItemsArray")
+        updateItemsInStorage()
         tableView.cellForRow(at: indexPath)?.accessoryType = items[indexPath.row].done ? .checkmark : .none
         tableView.deselectRow(at: indexPath, animated: true)
     }
@@ -38,8 +35,7 @@ class TodoListViewController: UITableViewController {
         let action = UIAlertAction(title: "Add item", style: .default) { _ in
             let newItem = TodoItem(title: textField.text ?? "", done: false)
             self.items.append(newItem)
-            self.defaults.set(self.items, forKey: "todoItemsArray")
-
+            self.updateItemsInStorage()
             self.tableView.reloadData()
         }
 
@@ -49,6 +45,31 @@ class TodoListViewController: UITableViewController {
         }
         alert.addAction(action)
         present(alert, animated: true, completion: nil)
+    }
+
+    func updateItemsInStorage() {
+        let encoder = PropertyListEncoder()
+        guard let url = dataFilePath else { return }
+        do {
+            let data = try encoder.encode(items)
+            try data.write(to: url)
+        } catch let err {
+            print("Error encoding item array: \(err)")
+        }
+    }
+
+    func loadItemsFromStorage() {
+        guard let url = dataFilePath else { return }
+        let decoder = PropertyListDecoder()
+        if let data = try? Data(contentsOf: url) {
+            do {
+                items = try decoder.decode([TodoItem].self, from: data)
+            } catch let error {
+                print("Error decoding: \(error)")
+            }
+
+        }
+        tableView.reloadData()
     }
 
 }

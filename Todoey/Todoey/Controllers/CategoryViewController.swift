@@ -1,12 +1,11 @@
 import UIKit
-import CoreData
+import RealmSwift
 
 class CategoryViewController: UITableViewController {
-    var categories: [TodoCategory] = []
 
-    var context: NSManagedObjectContext! {
-        (UIApplication.shared.delegate as? AppDelegate)?.persistentContainer.viewContext
-    }
+    let realm = try! Realm()
+
+    var categories: Results<TodoCategory>?
 
     override func viewDidLoad() {
         super.viewDidLoad()
@@ -18,10 +17,9 @@ class CategoryViewController: UITableViewController {
         var textField = UITextField()
         let alert = UIAlertController(title: "Add new category", message: nil, preferredStyle: .alert)
         let action = UIAlertAction(title: "Add category", style: .default) { _ in
-            let newCategory = TodoCategory(context: self.context)
+            let newCategory = TodoCategory()
             newCategory.name = textField.text ?? ""
-            self.categories.append(newCategory)
-            self.updateCategories()
+            self.save(category: newCategory)
         }
 
         alert.addTextField { alertTextField in
@@ -32,35 +30,17 @@ class CategoryViewController: UITableViewController {
         present(alert, animated: true, completion: nil)
     }
 
-    func updateCategories() {
-        do {
-            try context.save()
-        } catch let error {
-            print(error)
-        }
-        tableView.reloadData()
-    }
-
-    func loadCategories(using request: NSFetchRequest<TodoCategory> = TodoCategory.fetchRequest()) {
-        do {
-            categories = try context.fetch(request)
-        } catch let err {
-            print(err)
-        }
-        tableView.reloadData()
-    }
-
 }
 
 // MARK: - Table view delegates
 extension CategoryViewController {
     override func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
-        categories.count
+        categories?.count ?? 1
     }
 
     override func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
         let cell = tableView.dequeueReusableCell(withIdentifier: "CategoryCell", for: indexPath)
-        cell.textLabel?.text = categories[indexPath.row].name
+        cell.textLabel?.text = categories?[indexPath.row].name ?? "No categories added"
         return cell
     }
 
@@ -71,12 +51,26 @@ extension CategoryViewController {
     override func prepare(for segue: UIStoryboardSegue, sender: Any?) {
         let destinationVc = segue.destination as! TodoListViewController
         if let indexPath = tableView.indexPathForSelectedRow {
-            destinationVc.selectedCategory = categories[indexPath.row]
+            destinationVc.selectedCategory = categories?[indexPath.row]
         }
     }
 }
 
 // MARK: - Data manipulation
 extension CategoryViewController {
+    func save(category: TodoCategory) {
+        do {
+            try realm.write {
+                realm.add(category)
+            }
+        } catch let error {
+            print(error)
+        }
+        tableView.reloadData()
+    }
 
+    func loadCategories() {
+        categories = realm.objects(TodoCategory.self)
+        tableView.reloadData()
+    }
 }

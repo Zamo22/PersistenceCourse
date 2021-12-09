@@ -36,7 +36,7 @@ class TodoListViewController: UITableViewController {
                     // UPDATE
                     item.done.toggle()
                     // DELETE
-//                    realm.delete(item)
+                    //                    realm.delete(item)
                 }
             } catch {
                 print("Error saving done status \(error)")
@@ -85,21 +85,20 @@ class TodoListViewController: UITableViewController {
 
 }
 
-//extension TodoListViewController: UISearchBarDelegate {
-//    func searchBarSearchButtonClicked(_ searchBar: UISearchBar) {
-//        let request: NSFetchRequest<Item> = Item.fetchRequest()
-//        let predicate = NSPredicate(format: "title CONTAINS[cd] %@", searchBar.text ?? "")
-//        request.sortDescriptors = [NSSortDescriptor(key: "title", ascending: true)]
-//        loadItemsFromStorage(using: request, predicate: predicate)
-//    }
-//
-//    func searchBar(_ searchBar: UISearchBar, textDidChange searchText: String) {
-//        if searchBar.text?.count == 0 {
-//            loadItemsFromStorage()
-//
-//            DispatchQueue.main.async {
-//                searchBar.resignFirstResponder()
-//            }
-//        }
-//    }
-//}
+extension TodoListViewController: UISearchBarDelegate {
+    func searchBarSearchButtonClicked(_ searchBar: UISearchBar) {
+        items = items?.filter("title CONTAINS[cd] %@", searchBar.text ?? "")
+            .sorted(byKeyPath: "dateCreated", ascending: true)
+        tableView.reloadData()
+    }
+
+    func searchBar(_ searchBar: UISearchBar, textDidChange searchText: String) {
+        if searchBar.text?.count == 0 {
+            loadItemsFromStorage()
+
+            DispatchQueue.main.async {
+                searchBar.resignFirstResponder()
+            }
+        }
+    }
+}
